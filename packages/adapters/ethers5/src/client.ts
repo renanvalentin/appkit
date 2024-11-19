@@ -188,6 +188,32 @@ export class Ethers5Adapter extends AdapterBlueprint {
     }
   }
 
+  public async getGasPrice(
+    params: AdapterBlueprint.EstimateGasTransactionArgs
+  ): Promise<AdapterBlueprint.EstimateGasPriceResult> {
+    const { provider, caipNetwork, address } = params
+    if (!provider) {
+      throw new Error('Provider is undefined')
+    }
+
+    try {
+      const result = await Ethers5Methods.getGasPrice(
+        {
+          data: params.data as `0x${string}`,
+          to: params.to as `0x${string}`,
+          address: address as `0x${string}`
+        },
+        provider as Provider,
+        address as `0x${string}`,
+        Number(caipNetwork?.id)
+      )
+
+      return { gasPrice: result }
+    } catch (error) {
+      throw new Error('EthersAdapter:estimateGas - Estimate gas failed')
+    }
+  }
+
   public async getEnsAddress(
     params: AdapterBlueprint.GetEnsAddressParams
   ): Promise<AdapterBlueprint.GetEnsAddressResult> {

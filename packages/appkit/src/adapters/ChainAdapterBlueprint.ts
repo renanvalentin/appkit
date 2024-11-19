@@ -269,6 +269,10 @@ export abstract class AdapterBlueprint<
     params: AdapterBlueprint.EstimateGasTransactionArgs
   ): Promise<AdapterBlueprint.EstimateGasTransactionResult>
 
+  public abstract getGasPrice?(
+    params: AdapterBlueprint.EstimateGasPriceArgs
+  ): Promise<AdapterBlueprint.EstimateGasPriceResult>
+
   /**
    * Sends a transaction.
    * @param {AdapterBlueprint.SendTransactionParams} params - Parameters including address, to, data, value, gasPrice, gas, and optional provider
@@ -407,8 +411,17 @@ export namespace AdapterBlueprint {
     provider?: AppKitConnector['provider']
   }
 
+  export type EstimateGasPriceArgs = {
+    caipNetwork: CaipNetwork
+    provider?: AppKitConnector['provider']
+  }
+
   export type EstimateGasTransactionResult = {
     gas: bigint
+  }
+
+  export type EstimateGasPriceResult = {
+    gasPrice: bigint
   }
 
   export type WriteContractParams = {

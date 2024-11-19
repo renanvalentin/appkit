@@ -6,6 +6,11 @@ import bs58 from 'bs58'
 import { ConstantsUtil } from '@reown/appkit-common'
 
 export class UniversalAdapter extends AdapterBlueprint {
+  public override getGasPrice?(
+    _: AdapterBlueprint.EstimateGasPriceArgs
+  ): Promise<AdapterBlueprint.EstimateGasPriceResult> {
+    throw new Error('Method not implemented.')
+  }
   public async connectWalletConnect(onUri: (uri: string) => void) {
     const connector = this.connectors.find(c => c.type === 'WALLET_CONNECT')
 

@@ -20,7 +20,8 @@ import {
   type EstimateGasTransactionArgs,
   type AccountControllerState,
   type AdapterNetworkState,
-  SIWXUtil
+  SIWXUtil,
+  type EstimateGasPriceArgs
 } from '@reown/appkit-core'
 import {
   AccountController,
@@ -839,6 +840,28 @@ export class AppKit {
           })
 
           return result?.gas || 0n
+        }
+
+        return 0n
+      },
+      getGasPrice: async (args: EstimateGasPriceArgs) => {
+        if (args.chainNamespace === 'eip155') {
+          const adapter = this.getAdapter(ChainController.state.activeChain as ChainNamespace)
+          const provider = ProviderUtil.getProvider(
+            ChainController.state.activeChain as ChainNamespace
+          )
+          const caipNetwork = this.getCaipNetwork()
+          if (!caipNetwork) {
+            throw new Error('CaipNetwork is undefined')
+          }
+
+          const result = await adapter?.getGasPrice?.({
+            ...args,
+            provider,
+            caipNetwork
+          })
+
+          return result?.gasPrice || 0n
         }
 
         return 0n

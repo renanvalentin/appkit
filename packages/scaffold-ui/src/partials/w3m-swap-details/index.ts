@@ -2,11 +2,7 @@ import { html, LitElement } from 'lit'
 import { property, state } from 'lit/decorators.js'
 import styles from './styles.js'
 import { UiHelperUtil, customElement } from '@reown/appkit-ui'
-import { NumberUtil } from '@reown/appkit-common'
-import { ConstantsUtil, ChainController, SwapController } from '@reown/appkit-core'
-
-// -- Constants ----------------------------------------- //
-const slippageRate = ConstantsUtil.CONVERT_SLIPPAGE_TOLERANCE
+import { ChainController, SwapController } from '@reown/appkit-core'
 
 @customElement('w3m-swap-details')
 export class WuiSwapDetails extends LitElement {
@@ -62,11 +58,6 @@ export class WuiSwapDetails extends LitElement {
 
   // -- Render -------------------------------------------- //
   public override render() {
-    const minReceivedAmount =
-      this.toTokenAmount && this.maxSlippage
-        ? NumberUtil.bigNumber(this.toTokenAmount).minus(this.maxSlippage).toString()
-        : null
-
     if (!this.sourceToken || !this.toToken || this.inputError) {
       return null
     }
@@ -94,107 +85,6 @@ export class WuiSwapDetails extends LitElement {
               <wui-icon name="chevronBottom"></wui-icon>
             </wui-flex>
           </button>
-          ${this.detailsOpen
-            ? html`
-                <wui-flex flexDirection="column" gap="xs" class="details-content-container">
-                  <wui-flex flexDirection="column" gap="xs">
-                    <wui-flex
-                      justifyContent="space-between"
-                      alignItems="center"
-                      class="details-row"
-                    >
-                      <wui-flex alignItems="center" gap="xs">
-                        <wui-text class="details-row-title" variant="small-400" color="fg-150">
-                          Network cost
-                        </wui-text>
-                        <w3m-tooltip-trigger
-                          text=${`Network cost is paid in ${this.networkTokenSymbol} on the ${this.networkName} network in order to execute transaction.`}
-                        >
-                          <wui-icon size="xs" color="fg-250" name="infoCircle"></wui-icon>
-                        </w3m-tooltip-trigger>
-                      </wui-flex>
-                      <wui-text variant="small-400" color="fg-100">
-                        $${UiHelperUtil.formatNumberToLocalString(this.gasPriceInUSD, 3)}
-                      </wui-text>
-                    </wui-flex>
-                  </wui-flex>
-                  ${this.priceImpact
-                    ? html` <wui-flex flexDirection="column" gap="xs">
-                        <wui-flex
-                          justifyContent="space-between"
-                          alignItems="center"
-                          class="details-row"
-                        >
-                          <wui-flex alignItems="center" gap="xs">
-                            <wui-text class="details-row-title" variant="small-400" color="fg-150">
-                              Price impact
-                            </wui-text>
-                            <w3m-tooltip-trigger
-                              text="Price impact reflects the change in market price due to your trade"
-                            >
-                              <wui-icon size="xs" color="fg-250" name="infoCircle"></wui-icon>
-                            </w3m-tooltip-trigger>
-                          </wui-flex>
-                          <wui-flex>
-                            <wui-text variant="small-400" color="fg-200">
-                              ${UiHelperUtil.formatNumberToLocalString(this.priceImpact, 3)}%
-                            </wui-text>
-                          </wui-flex>
-                        </wui-flex>
-                      </wui-flex>`
-                    : null}
-                  ${this.maxSlippage && this.sourceToken.symbol
-                    ? html`<wui-flex flexDirection="column" gap="xs">
-                        <wui-flex
-                          justifyContent="space-between"
-                          alignItems="center"
-                          class="details-row"
-                        >
-                          <wui-flex alignItems="center" gap="xs">
-                            <wui-text class="details-row-title" variant="small-400" color="fg-150">
-                              Max. slippage
-                            </wui-text>
-                            <w3m-tooltip-trigger
-                              text=${`Max slippage sets the minimum amount you must receive for the transaction to proceed. ${
-                                minReceivedAmount
-                                  ? `Transaction will be reversed if you receive less than ${UiHelperUtil.formatNumberToLocalString(
-                                      minReceivedAmount,
-                                      6
-                                    )} ${this.toToken.symbol} due to price changes.`
-                                  : ''
-                              }`}
-                            >
-                              <wui-icon size="xs" color="fg-250" name="infoCircle"></wui-icon>
-                            </w3m-tooltip-trigger>
-                          </wui-flex>
-                          <wui-flex>
-                            <wui-text variant="small-400" color="fg-200">
-                              ${UiHelperUtil.formatNumberToLocalString(this.maxSlippage, 6)}
-                              ${this.toToken.symbol} ${slippageRate}%
-                            </wui-text>
-                          </wui-flex>
-                        </wui-flex>
-                      </wui-flex>`
-                    : null}
-                  <wui-flex flexDirection="column" gap="xs">
-                    <wui-flex
-                      justifyContent="space-between"
-                      alignItems="center"
-                      class="details-row provider-free-row"
-                    >
-                      <wui-flex alignItems="center" gap="xs">
-                        <wui-text class="details-row-title" variant="small-400" color="fg-150">
-                          Provider fee
-                        </wui-text>
-                      </wui-flex>
-                      <wui-flex>
-                        <wui-text variant="small-400" color="fg-200">0.85%</wui-text>
-                      </wui-flex>
-                    </wui-flex>
-                  </wui-flex>
-                </wui-flex>
-              `
-            : null}
         </wui-flex>
       </wui-flex>
     `

@@ -835,6 +835,14 @@ export type EstimateGasTransactionArgs =
       chainNamespace: 'solana'
     }
 
+export type EstimateGasPriceArgs =
+  | {
+      chainNamespace?: undefined | 'eip155'
+    }
+  | {
+      chainNamespace: 'solana'
+    }
+
 export interface WriteContractArgs {
   receiverAddress: `0x${string}`
   tokenAmount: bigint

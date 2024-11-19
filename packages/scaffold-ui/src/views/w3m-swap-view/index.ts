@@ -185,11 +185,7 @@ export class W3mSwapView extends LitElement {
     )
     const amount = target === 'toToken' ? this.toTokenAmount : this.sourceTokenAmount
     const price = target === 'toToken' ? this.toTokenPriceInUSD : this.sourceTokenPriceInUSD
-    let value = parseFloat(amount) * price
-
-    if (target === 'toToken') {
-      value -= this.gasPriceInUSD || 0
-    }
+    const value = parseFloat(amount) * price
 
     return html`<w3m-swap-input
       .value=${target === 'toToken' ? this.toTokenAmount : this.sourceTokenAmount}

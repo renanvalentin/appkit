@@ -55,6 +55,28 @@ export const Ethers5Methods = {
     return (await signer.estimateGas(txParams)).toBigInt()
   },
 
+  getGasPrice: async (
+    data: EstimateGasTransactionArgs,
+    provider: Provider,
+    address: string,
+    networkId: number
+  ) => {
+    if (!provider) {
+      throw new Error('estimateGas - provider is undefined')
+    }
+    if (!address) {
+      throw new Error('estimateGas - address is undefined')
+    }
+
+    if (data.chainNamespace && data.chainNamespace !== 'eip155') {
+      throw new Error('estimateGas - chainNamespace is not eip155')
+    }
+
+    const browserProvider = new ethers.providers.Web3Provider(provider, networkId)
+
+    return (await browserProvider.getGasPrice()).toBigInt()
+  },
+
   sendTransaction: async (
     data: SendTransactionArgs,
     provider: Provider,

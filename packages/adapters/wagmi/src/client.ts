@@ -25,7 +25,8 @@ import {
   waitForTransactionReceipt,
   getAccount,
   prepareTransactionRequest,
-  reconnect
+  reconnect,
+  getGasPrice as wagmiGetGasPrice
 } from '@wagmi/core'
 import { type Chain } from '@wagmi/core/chains'
 
@@ -299,6 +300,20 @@ export class WagmiAdapter extends AdapterBlueprint {
       return { gas: result }
     } catch (error) {
       throw new Error('WagmiAdapter:estimateGas - error estimating gas')
+    }
+  }
+
+  public async getGasPrice(
+    _: AdapterBlueprint.EstimateGasTransactionArgs
+  ): Promise<AdapterBlueprint.EstimateGasPriceResult> {
+    try {
+      const result = await wagmiGetGasPrice(this.wagmiConfig, {
+        chainId: 1
+      })
+
+      return { gasPrice: result }
+    } catch (error) {
+      throw new Error('WagmiAdapter:getGasPrice - error getting gas price')
     }
   }
 

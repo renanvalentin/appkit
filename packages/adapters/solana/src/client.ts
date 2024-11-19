@@ -40,6 +40,11 @@ export interface AdapterOptions {
 }
 
 export class SolanaAdapter extends AdapterBlueprint {
+  override getGasPrice?(
+    _: AdapterBlueprint.EstimateGasPriceArgs
+  ): Promise<AdapterBlueprint.EstimateGasPriceResult> {
+    throw new Error('Method not implemented.')
+  }
   private connectionSettings: Commitment | ConnectionConfig
   private w3mFrameProvider?: W3mFrameProvider
   private authProvider?: AuthProvider

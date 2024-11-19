@@ -40,7 +40,7 @@ export class W3mSwapPreviewView extends LitElement {
 
   @state() private balanceSymbol = AccountController.state.balanceSymbol
 
-  @state() private gasPriceInUSD = SwapController.state.gasPriceInUSD
+  // @state() private gasPriceInUSD = SwapController.state.gasPriceInUSD
 
   @state() private inputError = SwapController.state.inputError
 
@@ -73,9 +73,11 @@ export class W3mSwapPreviewView extends LitElement {
           this.approvalTransaction = newState.approvalTransaction
           this.swapTransaction = newState.swapTransaction
           this.sourceToken = newState.sourceToken
-          this.gasPriceInUSD = newState.gasPriceInUSD
+          // eslint-disable-next-line capitalized-comments
+          // this.gasPriceInUSD = newState.gasPriceInUSD
           this.toToken = newState.toToken
-          this.gasPriceInUSD = newState.gasPriceInUSD
+          // eslint-disable-next-line capitalized-comments
+          // this.gasPriceInUSD = newState.gasPriceInUSD
           this.toTokenPriceInUSD = newState.toTokenPriceInUSD
           this.sourceTokenAmount = newState.sourceTokenAmount ?? ''
           this.toTokenAmount = newState.toTokenAmount ?? ''
@@ -129,8 +131,7 @@ export class W3mSwapPreviewView extends LitElement {
     )} ${this.toToken?.symbol}`
 
     const sourceTokenValue = parseFloat(this.sourceTokenAmount) * this.sourceTokenPriceInUSD
-    const toTokenValue =
-      parseFloat(this.toTokenAmount) * this.toTokenPriceInUSD - (this.gasPriceInUSD || 0)
+    const toTokenValue = parseFloat(this.toTokenAmount) * this.toTokenPriceInUSD
     const sentPrice = UiHelperUtil.formatNumberToLocalString(sourceTokenValue)
     const receivePrice = UiHelperUtil.formatNumberToLocalString(toTokenValue)
 

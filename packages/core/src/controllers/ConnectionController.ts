@@ -7,7 +7,8 @@ import type {
   EstimateGasTransactionArgs,
   SendTransactionArgs,
   WcWallet,
-  WriteContractArgs
+  WriteContractArgs,
+  EstimateGasPriceArgs
 } from '../utils/TypeUtil.js'
 import { TransactionsController } from './TransactionsController.js'
 import { ChainController } from './ChainController.js'
@@ -51,6 +52,7 @@ export interface ConnectionControllerClient {
     address: `0x${string}`
   }) => Promise<`0x${string}`>
   getCapabilities: (params: string) => Promise<unknown>
+  getGasPrice?: (args: EstimateGasPriceArgs) => Promise<bigint>
 }
 
 export interface ConnectionControllerState {
@@ -198,6 +200,10 @@ export const ConnectionController = {
 
   async estimateGas(args: EstimateGasTransactionArgs) {
     return this._getClient()?.estimateGas(args)
+  },
+
+  async getGasPrice(args: EstimateGasPriceArgs) {
+    return this._getClient()?.getGasPrice?.(args)
   },
 
   async writeContract(args: WriteContractArgs) {

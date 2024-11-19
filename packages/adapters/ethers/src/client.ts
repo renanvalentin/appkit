@@ -23,6 +23,11 @@ export interface EIP6963ProviderDetail {
 }
 
 export class EthersAdapter extends AdapterBlueprint {
+  override getGasPrice?(
+    _: AdapterBlueprint.EstimateGasPriceArgs
+  ): Promise<AdapterBlueprint.EstimateGasPriceResult> {
+    throw new Error('Method not implemented.')
+  }
   private ethersConfig?: ProviderType
   public adapterType = 'ethers'
 

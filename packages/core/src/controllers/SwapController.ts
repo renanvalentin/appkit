@@ -1,3 +1,4 @@
+/* eslint-disable multiline-comment-style */
 import { subscribeKey as subKey } from 'valtio/vanilla/utils'
 import { proxy, subscribe as sub } from 'valtio/vanilla'
 import { AccountController } from './AccountController.js'
@@ -7,7 +8,11 @@ import { SwapApiUtil } from '../utils/SwapApiUtil.js'
 import { SnackController } from './SnackController.js'
 import { RouterController } from './RouterController.js'
 import { NumberUtil } from '@reown/appkit-common'
-import type { SwapTokenWithBalance } from '../utils/TypeUtil.js'
+import type {
+  BlockchainApiSwapQuoteRequest,
+  BlockchainApiSwapQuoteResponse,
+  SwapTokenWithBalance
+} from '../utils/TypeUtil.js'
 import { CoreHelperUtil } from '../utils/CoreHelperUtil.js'
 import { BlockchainApiController } from './BlockchainApiController.js'
 import { OptionsController } from './OptionsController.js'
@@ -23,6 +28,35 @@ export const TO_AMOUNT_DECIMALS = 6
 
 // -- Types --------------------------------------------- //
 export type SwapInputTarget = 'sourceToken' | 'toToken'
+
+type Order = {
+  amount: {
+    assetId: string
+    value: number | string
+  }
+  createdAt: string
+  fromAddress: string
+  id: string
+  message: string
+  pairId: string
+  payInAddress: string
+  payInAddressTag?: string
+  providerOrderId: string
+  rateId: string
+  toAddress: string
+  transactionId: string
+  updatedAt: string
+  status: string
+  slippage: number
+  extraFeatures?: {
+    pid?: string
+    stringAmounts?: boolean
+  }
+  swapMode: {
+    ExactIn: 'ExactIn'
+    ExactOut: 'ExactOut'
+  }
+}
 
 type TransactionParams = {
   data: string
@@ -90,6 +124,9 @@ export interface SwapControllerState {
   priceImpact: number | undefined
   maxSlippage: number | undefined
   providerFee: string | undefined
+
+  // XO
+  quoteAmount?: string
 }
 
 export interface TokenInfo {
@@ -153,7 +190,10 @@ const initialState: SwapControllerState = {
   gasPriceInUSD: 0,
   priceImpact: undefined,
   maxSlippage: undefined,
-  providerFee: undefined
+  providerFee: undefined,
+
+  // XO
+  quoteAmount: undefined
 }
 
 const state = proxy<SwapControllerState>(initialState)
@@ -248,7 +288,12 @@ export const SwapController = {
 
     if (!price) {
       state.loadingPrices = true
-      price = await this.getAddressPrice(address)
+
+      if (address === 'solana:1:noop') {
+        price = await this.xoGetAddressPrice()
+      } else {
+        price = await this.getAddressPrice(address)
+      }
     }
 
     if (target === 'sourceToken') {
@@ -263,6 +308,120 @@ export const SwapController = {
         this.swapTokens()
       }
     }
+  },
+
+  // Exodus
+  async xoGetAddressPrice() {
+    const myHeaders = new Headers()
+
+    const requestOptions: RequestInit = {
+      method: 'GET',
+      headers: myHeaders
+    }
+
+    const response = await fetch(
+      'https://pricing.a.exodus.io/current-price?from=SOL&to=USD&ignoreInvalidSymbols=true',
+      requestOptions
+    ).then(res => res.json())
+
+    return response.SOL.USD
+  },
+
+  async xoFetchSwapQuote({
+    amount,
+    from
+  }: BlockchainApiSwapQuoteRequest): Promise<BlockchainApiSwapQuoteResponse> {
+    const myHeaders = new Headers()
+    myHeaders.append('App-Name', 'walletconnect')
+    myHeaders.append('App-Version', '1.0.0')
+
+    const requestOptions = {
+      method: 'GET',
+      headers: myHeaders
+    }
+
+    const response: Array<{
+      amount: {
+        assetId: string
+        value: number
+      }
+      id: string
+      minerFee: {
+        value: number
+      }
+    }> = await fetch(
+      'https://exchange-server-s.exodus.io/v3/pairs/ETH_SOL/rates',
+      requestOptions
+    ).then(res => res.json())
+
+    return {
+      quotes: response.map(rate => ({
+        id: rate.id,
+        fromAmount: amount,
+        fromAccount: from,
+        toAmount: NumberUtil.bigNumber(amount)
+          .multipliedBy(NumberUtil.bigNumber(rate.amount.value))
+          .minus(NumberUtil.bigNumber(rate.minerFee.value))
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          .multipliedBy(10 ** state.toToken!.decimals)
+          .toString(),
+        toAccount: 'solana:1:AdWYJZ6REwtgCQjG9RtS8T8oQWWm2AS4Z6PHiissb7FW'
+      }))
+    }
+  },
+
+  async xoCreateOrder() {
+    const myHeaders = new Headers()
+    myHeaders.append('App-Name', 'walletconnect')
+    myHeaders.append('App-Version', '1.0.0')
+    myHeaders.append('Content-Type', 'application/json')
+
+    const raw = JSON.stringify({
+      fromAmount: state.sourceTokenAmount,
+      fromAddress: '0xbb9aA61fC4dB0D9BC6F81Ee4bBCbCd1a571326ff',
+      toAddress: 'AdWYJZ6REwtgCQjG9RtS8T8oQWWm2AS4Z6PHiissb7FW',
+      pairId: 'ETH_SOL',
+      toAmount: state.quoteAmount
+    })
+
+    const requestOptions = {
+      method: 'POST',
+      headers: myHeaders,
+      body: raw
+    }
+
+    const response: Order = await fetch(
+      'https://exchange-server-s.exodus.io/v3/orders',
+      requestOptions
+    ).then(res => res.json())
+
+    /*
+
+{
+    "amount": {
+        "assetId": "ETH",
+        "value": 0.14023742601916414
+    },
+    "createdAt": "2024-11-18T19:29:03.002Z",
+    "fromAddress": "0xbb9aA61fC4dB0D9BC6F81Ee4bBCbCd1a571326ff",
+    "fromTransactionId": "",
+    "id": "GRm9o8bKzMNOX7V",
+    "message": "",
+    "pairId": "ETH_SOL",
+    "payInAddress": "0xc22429f7b5173f26019139a50e4d4c8046dbd24f",
+    "providerOrderId": "av9ujmdfw0i0lpump2",
+    "rateId": "30af0489-cac3-4962-b7e4-1e34a5aa187a",
+    "toAddress": "AdWYJZ6REwtgCQjG9RtS8T8oQWWm2AS4Z6PHiissb7FW",
+    "toTransactionId": "",
+    "updatedAt": "2024-11-18T19:29:03.002Z",
+    "status": "inProgress",
+    "extraFeatures": {
+        "stringAmounts": "false"
+    }
+}
+    */
+
+    return response
   },
 
   switchTokens() {
@@ -297,6 +456,7 @@ export const SwapController = {
     state.networkTokenSymbol = initialState.networkTokenSymbol
     state.networkBalanceInUSD = initialState.networkBalanceInUSD
     state.inputError = initialState.inputError
+    state.swapTransaction = undefined
   },
 
   resetValues() {
@@ -499,14 +659,45 @@ export const SwapController = {
       .multipliedBy(10 ** sourceToken.decimals)
       .integerValue()
 
-    const quoteResponse = await BlockchainApiController.fetchSwapQuote({
-      userAddress: address,
-      projectId: OptionsController.state.projectId,
-      from: sourceToken.address,
-      to: toToken.address,
-      gasPrice: state.gasFee,
-      amount: amountDecimal.toString()
-    })
+    let quoteResponse: BlockchainApiSwapQuoteResponse = {
+      quotes: []
+    }
+
+    if (toToken.address === 'solana:1:noop') {
+      quoteResponse = await this.xoFetchSwapQuote({
+        userAddress: address,
+        projectId: OptionsController.state.projectId,
+        from: sourceToken.address,
+        to: toToken.address,
+        gasPrice: state.gasFee,
+        amount: state.sourceTokenAmount
+      })
+    } else {
+      quoteResponse = await BlockchainApiController.fetchSwapQuote({
+        userAddress: address,
+        projectId: OptionsController.state.projectId,
+        from: sourceToken.address,
+        to: toToken.address,
+        gasPrice: state.gasFee,
+        amount: amountDecimal.toString()
+      })
+    }
+
+    /**
+{
+    "quotes": [
+        {
+            "id": null,
+            "fromAmount": "1000000000000000000",
+            "fromAccount": "eip155:1:0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "toAmount": "3161720267",
+            "toAccount": "eip155:1:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        }
+    ]
+}
+
+
+    **/
 
     state.loadingQuote = false
 
@@ -521,6 +712,8 @@ export const SwapController = {
       .toString()
 
     this.setToTokenAmount(toTokenAmount)
+
+    state.quoteAmount = toTokenAmount
 
     const isInsufficientToken = this.hasInsufficientToken(
       state.sourceTokenAmount,
@@ -541,11 +734,64 @@ export const SwapController = {
     const sourceToken = state.sourceToken
     const toToken = state.toToken
 
-    if (!fromCaipAddress || !availableToSwap || !sourceToken || !toToken || state.loadingQuote) {
+    if (
+      !fromCaipAddress ||
+      !availableToSwap ||
+      !sourceToken ||
+      !toToken ||
+      state.loadingQuote ||
+      state.swapTransaction
+    ) {
       return undefined
     }
 
     try {
+      if (toToken.address === 'solana:1:noop') {
+        state.loadingBuildTransaction = true
+
+        const order = await this.xoCreateOrder()
+
+        const gasLimit = await ConnectionController.estimateGas({
+          address: order.fromAddress as `0x${string}`,
+          to: order.payInAddress as `0x${string}`,
+          data: '0x',
+          chainNamespace: 'eip155'
+        })
+
+        if (!gasLimit) {
+          throw new TransactionError('Failed to estimate gas limit')
+        }
+
+        const gasPrice = await ConnectionController.getGasPrice({
+          chainNamespace: 'eip155'
+        })
+
+        if (!gasPrice) {
+          throw new TransactionError('Failed to get gas price')
+        }
+
+        const transaction: TransactionParams | undefined = {
+          to: order.payInAddress,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          toAmount: state.quoteAmount!,
+          value: BigInt(
+            NumberUtil.bigNumber(order.amount.value)
+              .multipliedBy(10 ** sourceToken.decimals)
+              .toString()
+          ),
+          data: '0x',
+          gas: gasLimit,
+          gasPrice
+        }
+
+        state.loadingBuildTransaction = false
+        state.fetchError = false
+
+        state.swapTransaction = transaction
+
+        return transaction
+      }
+
       state.loadingBuildTransaction = true
       const hasAllowance = await SwapApiUtil.fetchSwapAllowance({
         userAddress: fromCaipAddress,
@@ -763,14 +1009,15 @@ export const SwapController = {
     }
 
     try {
-      const forceUpdateAddresses = [state.sourceToken?.address, state.toToken?.address].join(',')
+      const forceUpdateAddresses = [state.sourceToken?.address].join(',')
       const transactionHash = await ConnectionController.sendTransaction({
         address: fromAddress as `0x${string}`,
         to: data.to as `0x${string}`,
         data: data.data as `0x${string}`,
         gas: data.gas,
         gasPrice: BigInt(data.gasPrice),
-        value: data.value
+        value: data.value,
+        chainNamespace: 'eip155'
       })
 
       state.loadingTransaction = false
@@ -859,12 +1106,14 @@ export const SwapController = {
       BigInt(state.gasFee),
       BigInt(INITIAL_GAS_LIMIT)
     )
+    // if (toTokenAddress !== 'solana:1:noop') {
     state.priceImpact = SwapCalculationUtil.getPriceImpact({
       sourceTokenAmount: state.sourceTokenAmount,
       sourceTokenPriceInUSD: state.sourceTokenPriceInUSD,
       toTokenPriceInUSD: state.toTokenPriceInUSD,
       toTokenAmount: state.toTokenAmount
     })
+    // }
     state.maxSlippage = SwapCalculationUtil.getMaxSlippage(state.slippage, state.toTokenAmount)
     state.providerFee = SwapCalculationUtil.getProviderFee(state.sourceTokenAmount)
   }
